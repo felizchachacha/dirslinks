@@ -24,9 +24,7 @@ function parter_a_pair() {
 	existing_partner=$(realpath --relative-to="${mountpoint}" "${existing_partner}")
 	new_partner=$(realpath --relative-to="${mountpoint}" "${new_partner}")
 	local blockdev=$("${HELPERUTILSDIR}"/get-filesdev.bash "${mountpoint}")
-	#"${ME}" unmount "${FS}"
 	echo "link \"existing_partner}\" \"${new_partner}\"" | debugfs -w "${blockdev}"
-	#"${ME}" mount "${FS}"
 }
 
 function partner_them() {
@@ -62,11 +60,14 @@ while [ ${#} -gt 0 ]; do
 		exit 0
 		;;
 
-		''|'create-')
-			
+		'tag')
+			shift
+			ln "${@}"
+		exit 0
 		;;
 
-		'init')
+
+		'init'|'i')
 			shift
 			if  [ -b $(realpath "${1}") ]; then
 				readonly BLOCKDEV="${1}"
@@ -121,6 +122,13 @@ while [ ${#} -gt 0 ]; do
 		'unmount')
 			shift
 			umount "${@}"
+		exit 0
+		;;
+
+		'remount'|'rmnt'|'refresh'|'re')
+			shift
+			umount "${@}" || true
+			mount "${@}"
 		exit 0
 		;;
 
