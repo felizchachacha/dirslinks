@@ -13,8 +13,33 @@ readonly MNT_DEFOPTS="norecovery,acl,discard,user_xattr"
 
 [ ${#} -eq 0 ] && set -- ls
 
+function parter_a_pair() {
+	local existing_partner="${1}"
+	local new_partner="${2}"
+	local mountpoint=$("${HELPERUTILSDIR}"/get-mountpoint.bash "${existing_partner}")
+	if [[ $("${HELPERUTILSDIR}"/get-mountpoint.bash "${new_partner}") != "${mountpoint}" ]]; then
+		echo "'${existing_partner}' and '${new_partner}' must be on same device"
+		exit 2
+	fi
+	existing_partner=$(realpath --relative-to="${mountpoint}" "${existing_partner}")
+	new_partner=$(realpath --relative-to="${mountpoint}" "${new_partner}")
+	local blockdev=$("${HELPERUTILSDIR}"/get-filesdev.bash "${mountpoint}")
+	#"${ME}" unmount "${FS}"
+	echo "link \"existing_partner}\" \"${new_partner}\"" | debugfs -w "${blockdev}"
+	#"${ME}" mount "${FS}"
+}
+
 function partner_them() {
-	true	
+	local existing_partner="${1}"
+	shift
+	local new_partner
+	[[ "${existing_partner}" == '' ]] && exit 1
+	while [ ${#} -gt 0 ]; do
+		new_partner="${1}"
+		[[ "${new_partner}" == '' ]] && exit 1
+		shift
+		parter_a_pair "${existing_partner}" "${new_partner}"
+	done
 }
 
 while [ ${#} -gt 0 ]; do
@@ -34,7 +59,7 @@ while [ ${#} -gt 0 ]; do
 		'partner')
 			shift
 			partner_them "${@}"
-			echo "" | debugfs -w "${BLOCKDEV}"
+		exit 0
 		;;
 
 		''|'create-')
@@ -63,6 +88,10 @@ while [ ${#} -gt 0 ]; do
 		'mount')
 			shift
 			readonly WHAT="${1}"
+			if [[ "${2}" == '' ]]; then
+				mount -v "${WHAT}"
+				exit 0
+			fi
 			shift
 			readonly MOUNTPOINT=$("${HELPERUTILSDIR}"/ensure-path.bash "${1}")
 			shift
@@ -97,6 +126,7 @@ while [ ${#} -gt 0 ]; do
 
 		*)
 			echo what?
+			echo "Example could be like ./dt.bash -v init /dev/zvol/rpool/volumes/debugfs -d /home/ubuntu-studio/Attention/"
 			shift
 		exit 1
 		;;
